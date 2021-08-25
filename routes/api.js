@@ -36,20 +36,24 @@ module.exports = async function (app) {
 		.route('/api/issues/:project')
 
 		.get(async function (req, res) {
-			let project = req.params.project;
+			const project = req.params.project;
 
 			// return everything except the __v field
-			const issues = await Issue.find({}).select('-__v').exec();
+			// const issues = await Issue.find({}).select('-__v').exec();
+			const issues = await Issue.find({project_title: project, ...req.query})
+				.select('-__v')
+				.exec();
 
-			console.log(issues);
-			// const issues = await Issue.find({project_title: project}).select('-__v').exec();
+			// console.log(req.query);
+
+			return res.json(issues);
 		})
 
 		.post(async function (req, res) {
 			const project = req.params.project;
 
-			console.log(req.body, req.params);
-			let issueObject = {project_title: project};
+			// console.log(req.body, req.params);
+			let issueObject = {project_title: project, open: true};
 
 			Object.keys(req.body).forEach(
 				key => req.body[key].length && (issueObject[key] = req.body[key])
@@ -59,6 +63,8 @@ module.exports = async function (app) {
 				const addedIssue = await new Issue(issueObject).save();
 
 				const {
+					_id,
+					project_title,
 					issue_title,
 					issue_text,
 					created_by,
@@ -72,6 +78,8 @@ module.exports = async function (app) {
 				if (addedIssue) {
 					// return res.json(addedIssue);
 					return res.json({
+						_id,
+						project_title,
 						issue_title,
 						issue_text,
 						created_by,
@@ -81,10 +89,12 @@ module.exports = async function (app) {
 						updated_at: updated_at.toDateString(),
 					});
 				} else {
-					return res.json({error: 'error adding the issue to the db'});
+					return res.status(400).json({error: 'error adding the issue to the db'});
 				}
 			} catch (e) {
-				return res.json({error: 'error adding issue, check the form input data types'});
+				return res
+					.status(400)
+					.json({error: 'error adding issue, check the form input data types'});
 			}
 		})
 
@@ -100,19 +110,53 @@ module.exports = async function (app) {
 				key => updatedData[key].length && (updatedIssueObject[key] = updatedData[key])
 			);
 
-			console.log(req.body);
+			// console.log(req.body);
 
 			// const findIssue = await Issue.findById(_id).exec();
 			// console.log(findIssue);
+			try {
+				const updatedIssue = await Issue.findOneAndUpdate({_id}, updatedIssueObject, {
+					// upsert: false,
+					new: true,
+				}).select('-__v');
+				// console.log(updatedIssue, '------up');
 
-			const updatedIssue = await Issue.findOneAndUpdate({_id}, updatedIssueObject, {
-				// upsert: false,
-				new: true,
-			}).select('-__v');
-			console.log(updatedIssue, '------up');
+				const {
+					issue_title,
+					issue_text,
+					created_by,
+					assigned_to,
+					status_text,
+					created_at,
+					updated_at,
+				} = updatedIssue;
+
+				if (updatedIssue) {
+					// return res.json(addedIssue);
+					return res.json({
+						issue_title,
+						issue_text,
+						created_by,
+						assigned_to,
+						status_text,
+						created_at: created_at.toDateString(),
+						updated_at: updated_at.toDateString(),
+					});
+				} else {
+					return res.status(400).json({error: 'error updating the issue in the db'});
+				}
+			} catch (e) {
+				return res
+					.status(400)
+					.json({error: 'error updating issue, check the form input data types'});
+			}
 		})
 
 		.delete(async function (req, res) {
 			const project = req.params.project;
+
+			const {_id} = req.body;
+			const deletedIssue = await Issue.findByIdAndDelete({_id}).select('-__v');
+			// console.log(deletedIssue, '------deleted');
 		});
 };
