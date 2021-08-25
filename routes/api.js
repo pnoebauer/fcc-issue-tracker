@@ -7,9 +7,11 @@ mongoose.connect(process.env.MONGO_URI, {
 	useUnifiedTopology: true,
 });
 
+mongoose.set('useFindAndModify', false);
+
 const issueSchema = new mongoose.Schema(
 	{
-		// project_title: {type: String, required: true},
+		project_title: {type: String, required: true},
 		issue_title: {type: String, required: true},
 		issue_text: {type: String, required: true},
 		created_by: {type: String, required: true},
@@ -38,16 +40,24 @@ module.exports = async function (app) {
 
 			// return everything except the __v field
 			const issues = await Issue.find({}).select('-__v').exec();
+
+			console.log(issues);
 			// const issues = await Issue.find({project_title: project}).select('-__v').exec();
 		})
 
 		.post(async function (req, res) {
-			let project = req.params.project;
+			const project = req.params.project;
 
-			console.log(req.body);
-			const issueData = req.body;
+			console.log(req.body, req.params);
+			let issueObject = {project_title: project};
+
+			Object.keys(req.body).forEach(
+				key => req.body[key].length && (issueObject[key] = req.body[key])
+			);
+
 			try {
-				const addedIssue = await new Issue(issueData).save();
+				const addedIssue = await new Issue(issueObject).save();
+
 				const {
 					issue_title,
 					issue_text,
@@ -57,9 +67,8 @@ module.exports = async function (app) {
 					created_at,
 					updated_at,
 				} = addedIssue;
-				console.log(addedIssue);
-
 				// console.log(addedIssue);
+
 				if (addedIssue) {
 					// return res.json(addedIssue);
 					return res.json({
@@ -79,11 +88,31 @@ module.exports = async function (app) {
 			}
 		})
 
-		.put(function (req, res) {
-			let project = req.params.project;
+		.put(async function (req, res) {
+			// 6125b0700a16f60f605ffd82
+			const project = req.params.project;
+
+			const {_id, ...updatedData} = req.body;
+
+			let updatedIssueObject = {};
+
+			Object.keys(updatedData).forEach(
+				key => updatedData[key].length && (updatedIssueObject[key] = updatedData[key])
+			);
+
+			console.log(req.body);
+
+			// const findIssue = await Issue.findById(_id).exec();
+			// console.log(findIssue);
+
+			const updatedIssue = await Issue.findOneAndUpdate({_id}, updatedIssueObject, {
+				// upsert: false,
+				new: true,
+			}).select('-__v');
+			console.log(updatedIssue, '------up');
 		})
 
-		.delete(function (req, res) {
-			let project = req.params.project;
+		.delete(async function (req, res) {
+			const project = req.params.project;
 		});
 };
