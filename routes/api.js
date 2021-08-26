@@ -156,7 +156,21 @@ module.exports = async function (app) {
 			const project = req.params.project;
 
 			const {_id} = req.body;
-			const deletedIssue = await Issue.findByIdAndDelete({_id}).select('-__v');
-			// console.log(deletedIssue, '------deleted');
+			try {
+				const deletedIssue = await Issue.findByIdAndDelete({_id}).select('-__v');
+				// console.log(deletedIssue, '------deleted');
+				if (deletedIssue) {
+					// return res.json(addedIssue);
+					return res.json({_id, status: 'deleted'});
+				} else {
+					return res
+						.status(400)
+						.json({error: 'error deleting issue, check the provided id'});
+				}
+			} catch (e) {
+				return res
+					.status(400)
+					.json({error: 'error deleting issue, check the provided id'});
+			}
 		});
 };

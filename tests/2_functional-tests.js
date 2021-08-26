@@ -187,4 +187,72 @@ suite('Functional Tests', function () {
 				done();
 			});
 	});
+	test('Update an issue with no fields to update: PUT request to /api/issues/{project}', function (done) {
+		chai
+			.request(server)
+			.put('/api/issues/apitest')
+			.send({})
+			.end(function (err, res) {
+				assert.equal(
+					res.body.error,
+					'error updating issue, check the form input data types'
+				);
+				assert.equal(res.status, 400);
+				done();
+			});
+	});
+	test('Update an issue with an invalid _id: PUT request to /api/issues/{project}', function (done) {
+		chai
+			.request(server)
+			.put('/api/issues/apitest')
+			.send({
+				_id: 'invalidId',
+				issue_title: 'updated test',
+			})
+			.end(function (err, res) {
+				assert.equal(
+					res.body.error,
+					'error updating issue, check the form input data types'
+				);
+				assert.equal(res.status, 400);
+				done();
+			});
+	});
+	test('Delete an issue: DELETE request to /api/issues/{project}', function (done) {
+		chai
+			.request(server)
+			.delete('/api/issues/apitest')
+			.send({
+				_id: createdId,
+			})
+			.end(function (err, res) {
+				assert.deepEqual(res.body, {_id: createdId, status: 'deleted'});
+				assert.equal(res.status, 200);
+				done();
+			});
+	});
+	test('Delete an issue with an invalid _id: DELETE request to /api/issues/{project}', function (done) {
+		chai
+			.request(server)
+			.delete('/api/issues/apitest')
+			.send({
+				_id: 'invalidId',
+			})
+			.end(function (err, res) {
+				assert.equal(res.body.error, 'error deleting issue, check the provided id');
+				assert.equal(res.status, 400);
+				done();
+			});
+	});
+	test('Delete an issue with missing _id: DELETE request to /api/issues/{project}', function (done) {
+		chai
+			.request(server)
+			.delete('/api/issues/apitest')
+			.send({})
+			.end(function (err, res) {
+				assert.equal(res.body.error, 'error deleting issue, check the provided id');
+				assert.equal(res.status, 400);
+				done();
+			});
+	});
 });
